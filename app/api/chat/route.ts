@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClaudeClient, MODEL } from '@/lib/claude';
-import { getSystemPrompt, PARKED_PRD_RESUME_PROMPT } from '@/lib/prompts';
+import { getSystemPrompt } from '@/lib/prompts';
 import { Message, FlowType, InterviewMode } from '@/lib/types';
 
 export const runtime = 'nodejs';
@@ -58,9 +58,8 @@ function detectPhase(message: string, flowType: FlowType): string {
 
 export async function POST(request: NextRequest) {
   try {
-    const { messages, resumeContent, flowType = 'feature', interviewMode } = await request.json() as {
+    const { messages, flowType = 'feature', interviewMode } = await request.json() as {
       messages: Message[];
-      resumeContent?: string;
       flowType?: FlowType;
       interviewMode?: InterviewMode;
     };
@@ -75,12 +74,7 @@ export async function POST(request: NextRequest) {
     const claude = createClaudeClient();
 
     // Prepare system prompt based on flow type and mode
-    let systemPrompt: string;
-    if (resumeContent) {
-      systemPrompt = PARKED_PRD_RESUME_PROMPT(resumeContent);
-    } else {
-      systemPrompt = getSystemPrompt(flowType, interviewMode);
-    }
+    const systemPrompt = getSystemPrompt(flowType, interviewMode);
 
     // Convert messages to Claude format
     const claudeMessages = messages.map((msg: Message) => ({

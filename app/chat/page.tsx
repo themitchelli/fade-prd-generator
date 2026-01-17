@@ -5,8 +5,8 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import ChatMessage from '@/components/ChatMessage';
 import ChatInput from '@/components/ChatInput';
 import ProgressIndicator from '@/components/ProgressIndicator';
-import { Message, ConversationPhase, WorkType, InterviewMode, FlowType, getFlowType } from '@/lib/types';
-import { formatMarkdownPRD, formatSpikeBrief, formatTechDebtBrief } from '@/lib/utils';
+import { Message, ConversationPhase, WorkType, InterviewMode, FlowType, getFlowType, ParkedSession } from '@/lib/types';
+import { formatMarkdownPRD, formatSpikeBrief, formatTechDebtBrief, downloadFile, kebabCase } from '@/lib/utils';
 
 const workTypeLabels: Record<WorkType, string> = {
   'new-project': 'New Project',
@@ -36,82 +36,80 @@ function ChatPageContent() {
   const [flowType, setFlowType] = useState<FlowType>('feature');
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const initializedRef = useRef(false);
 
   useEffect(() => {
-    // Get work type and mode from session storage
-    let storedWorkType = sessionStorage.getItem('workType') as WorkType | null;
-    let storedMode = sessionStorage.getItem('interviewMode') as InterviewMode | null;
+    // Prevent double-initialization using ref (survives re-renders)
+    if (initializedRef.current) return;
+    initializedRef.current = true;
 
-    // If resuming, try to restore from localStorage
+    // If resuming, restore from parked session
     if (isResume) {
-      const parkedWorkType = localStorage.getItem('parkedWorkType') as WorkType | null;
-      const parkedMode = localStorage.getItem('parkedInterviewMode') as InterviewMode | null;
+      const parkedSessionJson = sessionStorage.getItem('parkedSession');
 
-      if (parkedWorkType) {
-        storedWorkType = parkedWorkType;
-        sessionStorage.setItem('workType', parkedWorkType);
-        localStorage.removeItem('parkedWorkType');
-      }
-      if (parkedMode) {
-        storedMode = parkedMode;
-        sessionStorage.setItem('interviewMode', parkedMode);
-        localStorage.removeItem('parkedInterviewMode');
+      if (parkedSessionJson) {
+        try {
+          const parkedSession: ParkedSession = JSON.parse(parkedSessionJson);
+
+          // Restore all state from parked session
+          setWorkType(parkedSession.workType);
+          setFlowType(parkedSession.flowType);
+          setPhase(parkedSession.phase);
+          setMessages(parkedSession.messages);
+          if (parkedSession.interviewMode) {
+            setInterviewMode(parkedSession.interviewMode);
+          }
+
+          // Store in sessionStorage for consistency
+          sessionStorage.setItem('workType', parkedSession.workType);
+          if (parkedSession.interviewMode) {
+            sessionStorage.setItem('interviewMode', parkedSession.interviewMode);
+          }
+
+          // Clean up
+          sessionStorage.removeItem('parkedSession');
+          return;
+        } catch (err) {
+          console.error('Failed to parse parked session:', err);
+        }
       }
 
-      // Default to feature if no type was saved (backward compatibility)
-      if (!storedWorkType) {
-        storedWorkType = 'new-feature';
-      }
-    }
-
-    if (!storedWorkType && !isResume) {
+      // If parsing failed or no session, redirect home
       router.push('/');
       return;
     }
 
-    if (storedWorkType) {
-      setWorkType(storedWorkType);
-      const flow = getFlowType(storedWorkType);
-      setFlowType(flow);
+    // Normal flow - get work type from session storage
+    const storedWorkType = sessionStorage.getItem('workType') as WorkType | null;
+    const storedMode = sessionStorage.getItem('interviewMode') as InterviewMode | null;
 
-      // Set initial phase based on flow type
-      if (flow === 'spike') {
-        setPhase('hypothesis');
-      } else if (flow === 'tech-debt') {
-        setPhase('current');
-      } else {
-        setPhase('value');
-      }
+    if (!storedWorkType) {
+      router.push('/');
+      return;
+    }
+
+    setWorkType(storedWorkType);
+    const flow = getFlowType(storedWorkType);
+    setFlowType(flow);
+
+    // Set initial phase based on flow type
+    if (flow === 'spike') {
+      setPhase('hypothesis');
+    } else if (flow === 'tech-debt') {
+      setPhase('current');
+    } else {
+      setPhase('value');
     }
 
     if (storedMode) {
       setInterviewMode(storedMode);
     }
 
-    // Initialize conversation
-    let initialMessage: Message;
-
-    if (isResume) {
-      const resumeContent = sessionStorage.getItem('parkedPRD') || '';
-      if (resumeContent) {
-        initialMessage = {
-          role: 'assistant',
-          content: "I've reviewed your parked session. Let me pick up where we left off.",
-        };
-      } else {
-        initialMessage = {
-          role: 'assistant',
-          content: initialMessages[storedWorkType ? getFlowType(storedWorkType) : 'feature'],
-        };
-      }
-    } else {
-      const flow = storedWorkType ? getFlowType(storedWorkType) : 'feature';
-      initialMessage = {
-        role: 'assistant',
-        content: initialMessages[flow],
-      };
-    }
-
+    // Initialize conversation with first message
+    const initialMessage: Message = {
+      role: 'assistant',
+      content: initialMessages[flow],
+    };
     setMessages([initialMessage]);
   }, [isResume, router]);
 
@@ -133,7 +131,6 @@ function ChatPageContent() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           messages: updatedMessages,
-          resumeContent: isResume ? sessionStorage.getItem('parkedPRD') : null,
           flowType,
           interviewMode,
         }),
@@ -210,17 +207,32 @@ function ChatPageContent() {
   };
 
   const handleParkIt = () => {
-    // Save work type and mode for resume
-    if (workType) {
-      localStorage.setItem('parkedWorkType', workType);
-    }
-    if (interviewMode) {
-      localStorage.setItem('parkedInterviewMode', interviewMode);
-    }
-    // Request Claude to output current state
-    sendMessage(
-      'Please output the current state of our conversation as a partial document that I can continue later.'
+    if (!workType) return;
+
+    // Create parked session object
+    const parkedSession: ParkedSession = {
+      version: 1,
+      timestamp: new Date().toISOString(),
+      workType,
+      interviewMode: interviewMode || undefined,
+      flowType,
+      phase,
+      messages,
+    };
+
+    // Generate filename
+    const dateStr = new Date().toISOString().split('T')[0];
+    const filename = `parked-session-${kebabCase(workTypeLabels[workType])}-${dateStr}.json`;
+
+    // Download the session file
+    downloadFile(
+      JSON.stringify(parkedSession, null, 2),
+      filename,
+      'application/json'
     );
+
+    // Show confirmation and redirect to home
+    router.push('/?parked=true');
   };
 
   const handleRetry = () => {

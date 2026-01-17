@@ -145,3 +145,14 @@ export function getFlowType(workType: WorkType): FlowType {
 export function needsModeSelection(workType: WorkType): boolean {
   return ['new-project', 'new-feature', 'enhancement'].includes(workType);
 }
+
+// Parked session structure for save/resume
+export interface ParkedSession {
+  version: 1;
+  timestamp: string;
+  workType: WorkType;
+  interviewMode?: InterviewMode;
+  flowType: FlowType;
+  phase: ConversationPhase;
+  messages: Message[];
+}

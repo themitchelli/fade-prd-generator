@@ -1,8 +1,8 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
-import { useState, ChangeEvent } from 'react';
-import { WorkType, needsModeSelection } from '@/lib/types';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { useState, useEffect, ChangeEvent, Suspense } from 'react';
+import { WorkType, needsModeSelection, ParkedSession } from '@/lib/types';
 
 const workTypes: { id: WorkType; title: string; description: string; icon: string }[] = [
   {
@@ -37,9 +37,21 @@ const workTypes: { id: WorkType; title: string; description: string; icon: strin
   },
 ];
 
-export default function Home() {
+function HomeContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [showUpload, setShowUpload] = useState(false);
+  const [showParkedMessage, setShowParkedMessage] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+
+  useEffect(() => {
+    // Show success message if redirected after parking
+    if (searchParams.get('parked') === 'true') {
+      setShowParkedMessage(true);
+      // Clean up URL
+      window.history.replaceState({}, '', '/');
+    }
+  }, [searchParams]);
 
   const handleSelectWorkType = (workType: WorkType) => {
     sessionStorage.setItem('workType', workType);
@@ -53,21 +65,52 @@ export default function Home() {
 
   const handleFileUpload = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        const content = event.target?.result as string;
-        sessionStorage.setItem('parkedPRD', content);
-        router.push('/chat?resume=true');
-      };
-      reader.readAsText(file);
-    }
+    if (!file) return;
+
+    setUploadError(null);
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const content = event.target?.result as string;
+
+      try {
+        // Try to parse as ParkedSession JSON
+        const parsed = JSON.parse(content);
+
+        // Validate the structure - check for required fields
+        if (
+          typeof parsed.version !== 'number' ||
+          typeof parsed.workType !== 'string' ||
+          !Array.isArray(parsed.messages)
+        ) {
+          throw new Error('Invalid session file format');
+        }
+
+        // Store the parked session and navigate
+        sessionStorage.setItem('parkedSession', content);
+        window.location.href = '/chat?resume=true';
+      } catch (err: any) {
+        // If it's not valid JSON or doesn't match our format
+        console.error('Upload error:', err);
+        setUploadError(err.message || 'Invalid file format. Please upload a valid parked session file.');
+      }
+    };
+    reader.readAsText(file);
   };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center px-4 py-8">
       <div className="max-w-4xl w-full">
         <div className="bg-white rounded-2xl shadow-xl p-8 md:p-12">
+          {/* Parked success message */}
+          {showParkedMessage && (
+            <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg">
+              <p className="text-green-800">
+                Session parked successfully! Your progress has been downloaded.
+              </p>
+            </div>
+          )}
+
           <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
             Ralph PRD Generator
           </h1>
@@ -107,7 +150,7 @@ export default function Home() {
                 <label className="cursor-pointer">
                   <input
                     type="file"
-                    accept=".md,.json,.txt"
+                    accept=".json"
                     onChange={handleFileUpload}
                     className="hidden"
                   />
@@ -116,10 +159,13 @@ export default function Home() {
                       Upload your parked session
                     </div>
                     <div className="text-sm text-gray-500">
-                      Click to select a file (.md, .json, or .txt)
+                      Click to select your parked session JSON file
                     </div>
                   </div>
                 </label>
+                {uploadError && (
+                  <p className="mt-3 text-sm text-red-600">{uploadError}</p>
+                )}
               </div>
             )}
           </div>
@@ -139,5 +185,17 @@ export default function Home() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function Home() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
+        <div className="text-gray-600">Loading...</div>
+      </div>
+    }>
+      <HomeContent />
+    </Suspense>
   );
 }
