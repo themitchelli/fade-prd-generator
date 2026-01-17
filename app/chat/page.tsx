@@ -5,6 +5,8 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import ChatMessage from '@/components/ChatMessage';
 import ChatInput from '@/components/ChatInput';
 import ProgressIndicator from '@/components/ProgressIndicator';
+import Navbar from '@/components/Navbar';
+import NavigationModal from '@/components/NavigationModal';
 import { Message, ConversationPhase, WorkType, InterviewMode, FlowType, getFlowType, ParkedSession } from '@/lib/types';
 import { formatMarkdownPRD, formatSpikeBrief, formatTechDebtBrief, downloadFile, kebabCase } from '@/lib/utils';
 
@@ -34,16 +36,15 @@ function ChatPageContent() {
   const [workType, setWorkType] = useState<WorkType | null>(null);
   const [interviewMode, setInterviewMode] = useState<InterviewMode | null>(null);
   const [flowType, setFlowType] = useState<FlowType>('feature');
+  const [showNavigationModal, setShowNavigationModal] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const initializedRef = useRef(false);
 
   useEffect(() => {
-    // Prevent double-initialization using ref (survives re-renders)
     if (initializedRef.current) return;
     initializedRef.current = true;
 
-    // If resuming, restore from parked session
     if (isResume) {
       const parkedSessionJson = sessionStorage.getItem('parkedSession');
 
@@ -51,7 +52,6 @@ function ChatPageContent() {
         try {
           const parkedSession: ParkedSession = JSON.parse(parkedSessionJson);
 
-          // Restore all state from parked session
           setWorkType(parkedSession.workType);
           setFlowType(parkedSession.flowType);
           setPhase(parkedSession.phase);
@@ -60,13 +60,11 @@ function ChatPageContent() {
             setInterviewMode(parkedSession.interviewMode);
           }
 
-          // Store in sessionStorage for consistency
           sessionStorage.setItem('workType', parkedSession.workType);
           if (parkedSession.interviewMode) {
             sessionStorage.setItem('interviewMode', parkedSession.interviewMode);
           }
 
-          // Clean up
           sessionStorage.removeItem('parkedSession');
           return;
         } catch (err) {
@@ -74,12 +72,10 @@ function ChatPageContent() {
         }
       }
 
-      // If parsing failed or no session, redirect home
       router.push('/');
       return;
     }
 
-    // Normal flow - get work type from session storage
     const storedWorkType = sessionStorage.getItem('workType') as WorkType | null;
     const storedMode = sessionStorage.getItem('interviewMode') as InterviewMode | null;
 
@@ -92,7 +88,6 @@ function ChatPageContent() {
     const flow = getFlowType(storedWorkType);
     setFlowType(flow);
 
-    // Set initial phase based on flow type
     if (flow === 'spike') {
       setPhase('hypothesis');
     } else if (flow === 'tech-debt') {
@@ -105,7 +100,6 @@ function ChatPageContent() {
       setInterviewMode(storedMode);
     }
 
-    // Initialize conversation with first message
     const initialMessage: Message = {
       role: 'assistant',
       content: initialMessages[flow],
@@ -114,9 +108,10 @@ function ChatPageContent() {
   }, [isResume, router]);
 
   useEffect(() => {
-    // Auto-scroll to bottom
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
+
+  const hasUserMessages = messages.some(m => m.role === 'user');
 
   const sendMessage = async (content: string) => {
     const userMessage: Message = { role: 'user', content };
@@ -151,7 +146,6 @@ function ChatPageContent() {
       setMessages([...updatedMessages, assistantMessage]);
       setPhase(data.phase);
 
-      // If complete, extract and navigate to output
       if (data.complete) {
         extractAndNavigateToOutput(data.message);
       }
@@ -176,7 +170,6 @@ function ChatPageContent() {
           .trim();
         const outputData = JSON.parse(jsonString);
 
-        // Format based on output type
         let markdownContent: string;
         let title: string;
 
@@ -191,13 +184,11 @@ function ChatPageContent() {
           title = outputData.markdown.featureName || 'feature';
         }
 
-        // Store in session storage
         sessionStorage.setItem('prdMarkdown', markdownContent);
         sessionStorage.setItem('prdJson', JSON.stringify(outputData.json, null, 2));
         sessionStorage.setItem('prdFeatureName', title);
         sessionStorage.setItem('outputType', flowType);
 
-        // Navigate to output page
         router.push('/output');
       }
     } catch (err) {
@@ -209,7 +200,6 @@ function ChatPageContent() {
   const handleParkIt = () => {
     if (!workType) return;
 
-    // Create parked session object
     const parkedSession: ParkedSession = {
       version: 1,
       timestamp: new Date().toISOString(),
@@ -220,19 +210,43 @@ function ChatPageContent() {
       messages,
     };
 
-    // Generate filename
     const dateStr = new Date().toISOString().split('T')[0];
     const filename = `parked-session-${kebabCase(workTypeLabels[workType])}-${dateStr}.json`;
 
-    // Download the session file
     downloadFile(
       JSON.stringify(parkedSession, null, 2),
       filename,
       'application/json'
     );
 
-    // Show confirmation and redirect to home
     router.push('/?parked=true');
+  };
+
+  const handleHomeClick = () => {
+    if (hasUserMessages) {
+      setShowNavigationModal(true);
+    } else {
+      // No conversation yet, go directly home
+      sessionStorage.removeItem('workType');
+      sessionStorage.removeItem('interviewMode');
+      router.push('/');
+    }
+  };
+
+  const handleModalPark = () => {
+    setShowNavigationModal(false);
+    handleParkIt();
+  };
+
+  const handleModalDiscard = () => {
+    setShowNavigationModal(false);
+    sessionStorage.removeItem('workType');
+    sessionStorage.removeItem('interviewMode');
+    router.push('/');
+  };
+
+  const handleModalCancel = () => {
+    setShowNavigationModal(false);
   };
 
   const handleRetry = () => {
@@ -248,38 +262,25 @@ function ChatPageContent() {
     }
   };
 
-  const handleBack = () => {
-    sessionStorage.removeItem('workType');
-    sessionStorage.removeItem('interviewMode');
-    router.push('/');
-  };
-
   return (
     <div className="h-screen flex flex-col bg-gray-50">
-      {/* Header */}
-      <div className="bg-white border-b border-gray-200 px-6 py-4 flex justify-between items-center">
-        <div className="flex items-center gap-4">
-          <button
-            onClick={handleBack}
-            className="text-gray-500 hover:text-gray-700"
-          >
-            ←
-          </button>
-          <div>
-            <h1 className="text-xl font-bold text-gray-900">Ralph PRD Generator</h1>
-            {workType && (
-              <div className="flex items-center gap-2 mt-1">
-                <span className="text-xs px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full">
-                  {workTypeLabels[workType]}
+      <Navbar onHomeClick={handleHomeClick} />
+
+      {/* Sub-header with work type and Park It button */}
+      <div className="bg-white border-b border-gray-200 px-6 py-3 flex justify-between items-center">
+        <div>
+          {workType && (
+            <div className="flex items-center gap-2">
+              <span className="text-xs px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full">
+                {workTypeLabels[workType]}
+              </span>
+              {interviewMode && (
+                <span className="text-xs px-2 py-0.5 bg-gray-100 text-gray-600 rounded-full">
+                  {interviewMode === 'quick' ? 'Quick' : 'Standard'}
                 </span>
-                {interviewMode && (
-                  <span className="text-xs px-2 py-0.5 bg-gray-100 text-gray-600 rounded-full">
-                    {interviewMode === 'quick' ? 'Quick' : 'Standard'}
-                  </span>
-                )}
-              </div>
-            )}
-          </div>
+              )}
+            </div>
+          )}
         </div>
         <button
           onClick={handleParkIt}
@@ -290,10 +291,8 @@ function ChatPageContent() {
         </button>
       </div>
 
-      {/* Progress Indicator */}
       <ProgressIndicator phase={phase} flowType={flowType} />
 
-      {/* Messages */}
       <div className="flex-1 overflow-y-auto px-4 py-6">
         <div className="max-w-4xl mx-auto">
           {messages.map((message, index) => (
@@ -331,10 +330,16 @@ function ChatPageContent() {
         </div>
       </div>
 
-      {/* Input */}
       {phase !== 'complete' && (
         <ChatInput onSend={sendMessage} disabled={isLoading} />
       )}
+
+      <NavigationModal
+        isOpen={showNavigationModal}
+        onPark={handleModalPark}
+        onDiscard={handleModalDiscard}
+        onCancel={handleModalCancel}
+      />
     </div>
   );
 }
