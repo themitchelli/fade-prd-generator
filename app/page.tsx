@@ -36,6 +36,12 @@ const workTypes: { id: WorkType; title: string; description: string; icon: strin
     description: 'Refactor, upgrade, or pay down technical debt',
     icon: '🔧',
   },
+  {
+    id: 'bug',
+    title: 'Bug Report',
+    description: 'Document a bug with reproduction steps and evidence',
+    icon: '🐛',
+  },
 ];
 
 function HomeContent() {

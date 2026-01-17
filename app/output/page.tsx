@@ -11,12 +11,14 @@ const outputTitles: Record<FlowType, string> = {
   feature: 'Your PRD is Ready!',
   spike: 'Your Spike Brief is Ready!',
   'tech-debt': 'Your Tech Debt Brief is Ready!',
+  bug: 'Your Bug Report is Ready!',
 };
 
 const outputDescriptions: Record<FlowType, string> = {
   feature: 'Download or copy your PRD in your preferred format',
   spike: 'Download or copy your spike brief in your preferred format',
   'tech-debt': 'Download or copy your tech debt brief in your preferred format',
+  bug: 'Download or copy your bug report in your preferred format',
 };
 
 export default function OutputPage() {
@@ -163,6 +165,28 @@ export default function OutputPage() {
                   <span className="text-blue-600 mr-2">•</span>
                   <span>
                     Plan validation checkpoints to catch issues early
+                  </span>
+                </li>
+              </ul>
+            )}
+            {outputType === 'bug' && (
+              <ul className="space-y-2 text-gray-700">
+                <li className="flex items-start">
+                  <span className="text-blue-600 mr-2">•</span>
+                  <span>
+                    Share with the development team for triage and prioritization
+                  </span>
+                </li>
+                <li className="flex items-start">
+                  <span className="text-blue-600 mr-2">•</span>
+                  <span>
+                    Use the <strong>JSON version</strong> with Claude Code for guided debugging
+                  </span>
+                </li>
+                <li className="flex items-start">
+                  <span className="text-blue-600 mr-2">•</span>
+                  <span>
+                    Add to your issue tracker with the reproduction steps
                   </span>
                 </li>
               </ul>

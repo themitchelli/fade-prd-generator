@@ -8,7 +8,7 @@ import ProgressIndicator from '@/components/ProgressIndicator';
 import Navbar from '@/components/Navbar';
 import NavigationModal from '@/components/NavigationModal';
 import { Message, ConversationPhase, WorkType, InterviewMode, FlowType, getFlowType, ParkedSession } from '@/lib/types';
-import { formatMarkdownPRD, formatSpikeBrief, formatTechDebtBrief, downloadFile, kebabCase } from '@/lib/utils';
+import { formatMarkdownPRD, formatSpikeBrief, formatTechDebtBrief, formatBugReport, downloadFile, kebabCase } from '@/lib/utils';
 
 const workTypeLabels: Record<WorkType, string> = {
   'new-project': 'New Project',
@@ -16,12 +16,14 @@ const workTypeLabels: Record<WorkType, string> = {
   'enhancement': 'Enhancement',
   'spike': 'Spike',
   'tech-debt': 'Tech Debt',
+  'bug': 'Bug Report',
 };
 
 const initialMessages: Record<FlowType, string> = {
   feature: "Let's create a PRD for your feature. What problem are we solving?",
   spike: "Let's define your spike. What question are you trying to answer, or what do you need to learn?",
   'tech-debt': "Let's document this tech debt. What system or component needs improvement, and why is it a problem?",
+  'bug': "Let's document this bug. What's happening, and when does it occur?",
 };
 
 function ChatPageContent() {
@@ -92,6 +94,8 @@ function ChatPageContent() {
       setPhase('hypothesis');
     } else if (flow === 'tech-debt') {
       setPhase('current');
+    } else if (flow === 'bug') {
+      setPhase('description');
     } else {
       setPhase('value');
     }
@@ -179,6 +183,9 @@ function ChatPageContent() {
         } else if (flowType === 'tech-debt') {
           markdownContent = formatTechDebtBrief(outputData.markdown);
           title = outputData.markdown.title || 'tech-debt';
+        } else if (flowType === 'bug') {
+          markdownContent = formatBugReport(outputData.markdown);
+          title = outputData.markdown.title || 'bug-report';
         } else {
           markdownContent = formatMarkdownPRD(outputData.markdown);
           title = outputData.markdown.featureName || 'feature';

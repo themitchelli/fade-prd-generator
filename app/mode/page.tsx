@@ -26,6 +26,7 @@ const workTypeLabels: Record<WorkType, string> = {
   'enhancement': 'Enhancement',
   'spike': 'Spike',
   'tech-debt': 'Tech Debt',
+  'bug': 'Bug Report',
 };
 
 export default function ModePage() {

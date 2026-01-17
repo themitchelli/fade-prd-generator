@@ -1,17 +1,18 @@
 // Work type classification
-export type WorkType = 'new-project' | 'new-feature' | 'enhancement' | 'spike' | 'tech-debt';
+export type WorkType = 'new-project' | 'new-feature' | 'enhancement' | 'spike' | 'tech-debt' | 'bug';
 
 // Interview mode (only for feature flows)
 export type InterviewMode = 'quick' | 'standard';
 
 // Flow type derived from work type
-export type FlowType = 'feature' | 'spike' | 'tech-debt';
+export type FlowType = 'feature' | 'spike' | 'tech-debt' | 'bug';
 
 // Conversation phases vary by flow type
 export type FeaturePhase = 'value' | 'scope' | 'stories' | 'complete';
 export type SpikePhase = 'hypothesis' | 'questions' | 'boundaries' | 'complete';
 export type TechDebtPhase = 'current' | 'target' | 'migration' | 'complete';
-export type ConversationPhase = FeaturePhase | SpikePhase | TechDebtPhase;
+export type BugPhase = 'description' | 'evidence' | 'behavior' | 'complete';
+export type ConversationPhase = FeaturePhase | SpikePhase | TechDebtPhase | BugPhase;
 
 export interface Message {
   role: 'user' | 'assistant';
@@ -111,9 +112,46 @@ export interface TechDebtJson {
   contextDocs?: string[];
 }
 
+// Bug output types
+export interface BugMarkdown {
+  title: string;
+  bugDescription: string;
+  stepsToReproduce: string[];
+  evidence: {
+    urls?: string[];
+    stackTraces?: string[];
+    consoleOutput?: string[];
+    screenshots?: string[];
+  };
+  expectedBehavior: string;
+  actualBehavior: string;
+  environment?: string;
+  severity?: string;
+  contextDocs?: string[];
+}
+
+export interface BugJson {
+  type: 'bug';
+  branchName: string;
+  title: string;
+  bugDescription: string;
+  stepsToReproduce: string[];
+  evidence: {
+    urls?: string[];
+    stackTraces?: string[];
+    consoleOutput?: string[];
+    screenshots?: string[];
+  };
+  expectedBehavior: string;
+  actualBehavior: string;
+  environment?: string;
+  severity?: string;
+  contextDocs?: string[];
+}
+
 // Union types for output
-export type OutputMarkdown = PRDMarkdown | SpikeMarkdown | TechDebtMarkdown;
-export type OutputJson = PRDJson | SpikeJson | TechDebtJson;
+export type OutputMarkdown = PRDMarkdown | SpikeMarkdown | TechDebtMarkdown | BugMarkdown;
+export type OutputJson = PRDJson | SpikeJson | TechDebtJson | BugJson;
 
 export interface ChatSession {
   messages: Message[];
@@ -138,6 +176,8 @@ export function getFlowType(workType: WorkType): FlowType {
       return 'spike';
     case 'tech-debt':
       return 'tech-debt';
+    case 'bug':
+      return 'bug';
   }
 }
 

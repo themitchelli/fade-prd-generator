@@ -1,4 +1,4 @@
-import { PRDMarkdown, SpikeMarkdown, TechDebtMarkdown } from './types';
+import { PRDMarkdown, SpikeMarkdown, TechDebtMarkdown, BugMarkdown } from './types';
 
 export const formatMarkdownPRD = (data: PRDMarkdown): string => {
   let md = `# PRD: ${data.featureName}\n\n`;
@@ -109,6 +109,83 @@ export const formatTechDebtBrief = (data: TechDebtMarkdown): string => {
       md += `- ${risk}\n`;
     });
     md += '\n';
+  }
+
+  if (data.contextDocs && data.contextDocs.length > 0) {
+    md += `## Supporting Materials\n`;
+    data.contextDocs.forEach(doc => {
+      md += `- ${doc}\n`;
+    });
+  }
+
+  return md;
+};
+
+export const formatBugReport = (data: BugMarkdown): string => {
+  let md = `# ${data.title}\n\n`;
+
+  md += `## Description\n${data.bugDescription}\n\n`;
+
+  if (data.stepsToReproduce && data.stepsToReproduce.length > 0) {
+    md += `## Steps to Reproduce\n`;
+    data.stepsToReproduce.forEach((step, index) => {
+      md += `${index + 1}. ${step}\n`;
+    });
+    md += '\n';
+  }
+
+  if (data.evidence) {
+    const hasEvidence =
+      (data.evidence.urls && data.evidence.urls.length > 0) ||
+      (data.evidence.stackTraces && data.evidence.stackTraces.length > 0) ||
+      (data.evidence.consoleOutput && data.evidence.consoleOutput.length > 0) ||
+      (data.evidence.screenshots && data.evidence.screenshots.length > 0);
+
+    if (hasEvidence) {
+      md += `## Evidence\n\n`;
+
+      if (data.evidence.urls && data.evidence.urls.length > 0) {
+        md += `### URLs\n`;
+        data.evidence.urls.forEach(url => {
+          md += `- ${url}\n`;
+        });
+        md += '\n';
+      }
+
+      if (data.evidence.stackTraces && data.evidence.stackTraces.length > 0) {
+        md += `### Stack Traces\n`;
+        data.evidence.stackTraces.forEach(trace => {
+          md += `\`\`\`\n${trace}\n\`\`\`\n\n`;
+        });
+      }
+
+      if (data.evidence.consoleOutput && data.evidence.consoleOutput.length > 0) {
+        md += `### Console Output\n`;
+        data.evidence.consoleOutput.forEach(output => {
+          md += `\`\`\`\n${output}\n\`\`\`\n\n`;
+        });
+      }
+
+      if (data.evidence.screenshots && data.evidence.screenshots.length > 0) {
+        md += `### Screenshots\n`;
+        data.evidence.screenshots.forEach(screenshot => {
+          md += `- ${screenshot}\n`;
+        });
+        md += '\n';
+      }
+    }
+  }
+
+  md += `## Expected Behavior\n${data.expectedBehavior}\n\n`;
+
+  md += `## Actual Behavior\n${data.actualBehavior}\n\n`;
+
+  if (data.environment) {
+    md += `## Environment\n${data.environment}\n\n`;
+  }
+
+  if (data.severity) {
+    md += `## Severity\n${data.severity}\n\n`;
   }
 
   if (data.contextDocs && data.contextDocs.length > 0) {

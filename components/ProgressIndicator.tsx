@@ -21,6 +21,11 @@ const phasesByFlow: Record<FlowType, { id: string; label: string }[]> = {
     { id: 'target', label: 'Phase 2: Target State' },
     { id: 'migration', label: 'Phase 3: Migration' },
   ],
+  bug: [
+    { id: 'description', label: 'Phase 1: Description' },
+    { id: 'evidence', label: 'Phase 2: Evidence' },
+    { id: 'behavior', label: 'Phase 3: Behavior' },
+  ],
 };
 
 export default function ProgressIndicator({ phase, flowType }: ProgressIndicatorProps) {

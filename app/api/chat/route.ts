@@ -20,6 +20,10 @@ const phasePatterns = {
     phase2: ['Phase 2:', 'Moving to Phase 2', 'Target State'],
     phase3: ['Phase 3:', 'Moving to Phase 3', 'Migration'],
   },
+  bug: {
+    phase2: ['Phase 2:', 'Moving to Phase 2', 'Evidence'],
+    phase3: ['Phase 3:', 'Moving to Phase 3', 'Behavior'],
+  },
 };
 
 // Initial phase for each flow type
@@ -27,6 +31,7 @@ const initialPhases: Record<FlowType, string> = {
   feature: 'value',
   spike: 'hypothesis',
   'tech-debt': 'current',
+  bug: 'description',
 };
 
 // Phase progression for each flow type
@@ -34,6 +39,7 @@ const phaseProgression: Record<FlowType, { phase2: string; phase3: string }> = {
   feature: { phase2: 'scope', phase3: 'stories' },
   spike: { phase2: 'questions', phase3: 'boundaries' },
   'tech-debt': { phase2: 'target', phase3: 'migration' },
+  bug: { phase2: 'evidence', phase3: 'behavior' },
 };
 
 function detectPhase(message: string, flowType: FlowType): string {
