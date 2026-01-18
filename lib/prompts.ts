@@ -85,7 +85,7 @@ When the conversation is complete and you have all necessary information, output
         "id": "US-001",
         "title": "Story title",
         "description": "As a [role], I want [capability] so that [benefit].",
-        "acceptanceCriteria": ["Criterion 1", "Criterion 2", "Typecheck passes"],
+        "acceptanceCriteria": ["Criterion 1", "Criterion 2", "Passes stack-appropriate validation (determined at execution time based on repo contents)"],
         "priority": 1,
         "passes": false,
         "notes": ""
@@ -178,7 +178,7 @@ When complete, output the PRD in this EXACT format:
         "id": "US-001",
         "title": "Story title",
         "description": "As a [role], I want [capability] so that [benefit].",
-        "acceptanceCriteria": ["Criterion 1", "Criterion 2", "Typecheck passes"],
+        "acceptanceCriteria": ["Criterion 1", "Criterion 2", "Passes stack-appropriate validation (determined at execution time based on repo contents)"],
         "priority": 1,
         "passes": false,
         "notes": ""
