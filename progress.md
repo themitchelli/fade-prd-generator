@@ -40,3 +40,11 @@ For blocked stories, use:
 - Updated output page to read and pass workType from sessionStorage
 - Files changed: components/OutputTabs.tsx, app/output/page.tsx
 - Tests: npm run build passed
+
+## 2026-01-19 10:50 - US-003: Fix type mapping for Tech Debt - COMPLETE
+
+- Changed Tech Debt JSON type from "techdebt" to "chore"
+- Updated TechDebtJson interface type literal
+- Updated prompt template JSON example
+- Files changed: lib/types.ts, lib/prompts.ts
+- Tests: npm run build passed

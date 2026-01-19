@@ -101,7 +101,7 @@ export interface TechDebtMarkdown {
 }
 
 export interface TechDebtJson {
-  type: 'techdebt';
+  type: 'chore';
   title: string;
   currentState: string;
   targetState: string;

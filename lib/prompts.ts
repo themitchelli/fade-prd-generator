@@ -311,7 +311,7 @@ When complete, output the tech debt brief in this EXACT format:
     "contextDocs": ["url1", "url2"]
   },
   "json": {
-    "type": "techdebt",
+    "type": "chore",
     "title": "Tech Debt: Title",
     "currentState": "Description of current state",
     "targetState": "Description of target state",
