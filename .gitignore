@@ -35,3 +35,10 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# FADE development files
+FADE.md
+progress.md
+learned.md
+prompt.md
+prds/
