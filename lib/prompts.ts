@@ -73,7 +73,7 @@ When the conversation is complete and you have all necessary information, output
   "json": {
     "type": "feature",
     "project": "ProjectName",
-    "branchName": "ralph/feature-name",
+    "branchName": "feature/feature-name",
     "featureName": "Feature Name",
     "description": "Feature Name - Brief description",
     "problemStatement": "One paragraph describing the problem",
@@ -166,7 +166,7 @@ When complete, output the PRD in this EXACT format:
   "json": {
     "type": "feature",
     "project": "ProjectName",
-    "branchName": "ralph/feature-name",
+    "branchName": "feature/feature-name",
     "featureName": "Feature Name",
     "description": "Feature Name - Brief description",
     "problemStatement": "One paragraph describing the problem",
@@ -383,7 +383,7 @@ When complete, output the bug report in this EXACT format:
   },
   "json": {
     "type": "bug",
-    "branchName": "ralph/bug-short-description",
+    "branchName": "bug/bug-short-description",
     "title": "Bug: Title describing the bug",
     "bugDescription": "Detailed description of the bug",
     "stepsToReproduce": ["Step 1", "Step 2", "Step 3"],

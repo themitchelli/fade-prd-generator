@@ -56,7 +56,7 @@
         "Or branchName field is removed entirely (optional for FADE)"
       ],
       "priority": 4,
-      "passes": false
+      "passes": true
     },
     {
       "id": "US-005",

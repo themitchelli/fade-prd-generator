@@ -48,3 +48,11 @@ For blocked stories, use:
 - Updated prompt template JSON example
 - Files changed: lib/types.ts, lib/prompts.ts
 - Tests: npm run build passed
+
+## 2026-01-19 10:55 - US-004: Remove Ralph references from branchName - COMPLETE
+
+- Updated branchName format from "ralph/feature-name" to "feature/feature-name"
+- Updated bug branchName from "ralph/bug-short-description" to "bug/bug-short-description"
+- Spike branchName was already correct ("spike/...")
+- Files changed: lib/prompts.ts
+- Tests: npm run build passed
