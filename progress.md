@@ -57,11 +57,12 @@ For blocked stories, use:
 - Files changed: lib/prompts.ts
 - Tests: npm run build passed
 
-## 2026-01-19 11:00 - US-005: Rename GitHub repository - BLOCKED
+## 2026-01-19 11:00 - US-005: Rename GitHub repository - COMPLETE
 
-- What was attempted: Reviewed requirements for repository rename
-- What's blocking: Repository rename requires manual action on GitHub by maintainer
-- Suggested resolution: Maintainer should rename repo on GitHub from ralph-prd-generator to fade-prd-generator (or prd-generator), then update README with new repo name
+- Repository renamed manually by maintainer on GitHub
+- GitHub redirects from old URL working
+- Files changed: None (manual GitHub action)
+- Tests: N/A
 
 ## 2026-01-19 11:05 - US-006: Update README for FADE alignment - COMPLETE
 
@@ -73,3 +74,15 @@ For blocked stories, use:
 - Updated work types documentation and feature list
 - Files changed: README.md
 - Tests: npm run build passed
+
+---
+
+## 2026-01-19 19:06 - FEAT-008 US-001: Create Dockerfile for PRD Generator - COMPLETE
+
+- Created multi-stage Dockerfile (deps → builder → runner)
+- Uses node:18-alpine base image (ARM64 compatible for Pi 5)
+- Enabled standalone output in next.config.mjs for optimized container size
+- Created .dockerignore to exclude unnecessary files from build context
+- Exposes port 3000
+- Files changed: Dockerfile, .dockerignore, next.config.mjs
+- Tests: npm run build passed, standalone output verified
