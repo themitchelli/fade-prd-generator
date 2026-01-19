@@ -1,33 +1,25 @@
-# Ralph PRD Generator
+# FADE PRD Generator
 
 A conversational AI tool that guides you through creating well-structured Product Requirements Documents (PRDs). Built with Next.js and powered by Claude AI.
 
-## ⚠️ Important: Node.js Version Requirement
-
-**This project requires Node.js 18.17.0 or higher.** The current system has Node.js 14.15.4, which is not compatible.
-
-To use this project, you need to upgrade Node.js:
-- **Recommended**: Use [nvm](https://github.com/nvm-sh/nvm) to manage Node versions
-- After installing nvm, run: `nvm install 18.17.0 && nvm use 18.17.0`
-- Or download Node.js 18+ from [nodejs.org](https://nodejs.org/)
-
 ## What It Does
 
-Ralph PRD Generator helps teams define features with clarity before development begins. Through a guided conversation, it:
+FADE PRD Generator helps teams define features with clarity before development begins. Through a guided conversation, it:
 
 - Elicits value and problem statements
 - Defines scope and boundaries
 - Generates well-sliced user stories (2-4 hours each)
 - Outputs PRDs in both Markdown and JSON formats
 
-The JSON format is compatible with [Ralph](https://github.com/snarktank/ralph), the autonomous AI agent loop.
+The JSON format is compatible with [FADE](https://github.com/themitchelli/fade), the Framework for Agentic Development and Engineering.
 
 ## Key Features
 
 - **Conversational Interface**: Natural chat-based PRD creation
-- **Three-Phase Process**: Value → Scope → Stories
+- **Multiple Work Types**: Features, Enhancements, Spikes, Tech Debt, Bug Reports
+- **Interview Modes**: Standard (thorough) or Quick (streamlined)
 - **Park & Resume**: Save partial PRDs and continue later
-- **Dual Output**: Markdown for humans, JSON for Ralph
+- **Dual Output**: Markdown for humans, JSON for FADE
 - **No Authentication**: Start immediately, no signup required
 - **Mobile Responsive**: Works on any device
 
@@ -50,8 +42,8 @@ The JSON format is compatible with [Ralph](https://github.com/snarktank/ralph), 
 ### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/yourusername/ralph-prd-generator.git
-cd ralph-prd-generator
+git clone https://github.com/themitchelli/fade-prd-generator.git
+cd fade-prd-generator
 ```
 
 ### 2. Install Dependencies
@@ -84,28 +76,40 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 
 ## Usage
 
-### Creating a New PRD
+### Work Types
 
-1. Click "Start New PRD" on the landing page
-2. Answer Claude's questions about your feature
-3. Progress through three phases:
-   - **Phase 1: Value & Problem** - What and why
-   - **Phase 2: Scope & Boundaries** - What's in and out
-   - **Phase 3: User Stories** - How it gets built
-4. Review and download your PRD
+Choose the type that best matches your work:
+
+| Type | Use Case | Output |
+|------|----------|--------|
+| **New Project** | Greenfield codebase | Feature PRD |
+| **New Feature** | Adding capability to existing system | Feature PRD |
+| **Enhancement** | Improving existing functionality | Enhancement PRD |
+| **Spike** | Time-boxed research/exploration | Spike Brief |
+| **Tech Debt** | Refactoring, migrations, upgrades | Tech Debt Brief |
+| **Bug Report** | Documenting bugs with reproduction steps | Bug Report |
+
+### Interview Modes
+
+For Feature-type work, choose your interview depth:
+
+- **Standard Mode**: More thorough, explores edge cases
+- **Quick Mode**: Faster, assumes you know what you want
 
 ### Park & Resume
 
 If you need to pause:
 
-1. Click "Park It" in the chat interface
-2. Claude will output your current progress
-3. Download the partial PRD
-4. Later, click "Continue Parked PRD" and upload your file
+1. Click "Home" in the navigation bar
+2. Choose "Park & Download" to save your session
+3. A JSON file downloads with your progress
+4. Later, click "Continue Parked Session" and upload your file
 
-### Output Formats
+## Output Formats
 
-**Markdown** - Human-readable format with:
+### Markdown
+
+Human-readable format with:
 - Problem statement
 - Success metrics
 - Scope (in/out)
@@ -113,22 +117,80 @@ If you need to pause:
 - Technical notes
 - Open questions
 
-**JSON (Ralph-compatible)** - Machine-readable format with:
-- Project name
-- Branch name
-- User stories with priorities
-- Pass/fail tracking for Ralph
+### JSON (FADE-compatible)
+
+Machine-readable format for use with the FADE framework.
+
+#### Filename Convention
+
+Downloaded JSON files follow this naming convention:
+
+```
+{TYPE}-XXX-{slug}.json
+```
+
+| Component | Description | Examples |
+|-----------|-------------|----------|
+| `TYPE` | Work type prefix (uppercase) | FEAT, ENH, SPIKE, CHORE, BUG |
+| `XXX` | Placeholder for your number | Replace with 001, 042, etc. |
+| `slug` | Kebab-case feature name | user-authentication, api-caching |
+
+Examples:
+- `FEAT-XXX-user-authentication.json`
+- `ENH-XXX-dashboard-performance.json`
+- `SPIKE-XXX-evaluate-auth-libraries.json`
+- `CHORE-XXX-upgrade-react-18.json`
+- `BUG-XXX-login-timeout-error.json`
+
+#### JSON Structure
+
+Feature PRDs follow this structure:
+
+```json
+{
+  "type": "feature",
+  "project": "Project Name",
+  "branchName": "feature/feature-name",
+  "featureName": "Feature Name",
+  "description": "Brief description",
+  "problemStatement": "Problem being solved",
+  "successMetrics": ["Metric 1", "Metric 2"],
+  "inScope": ["Item 1", "Item 2"],
+  "outOfScope": ["Item 1", "Item 2"],
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "Story title",
+      "description": "As a [role], I want [capability] so that [benefit]",
+      "acceptanceCriteria": ["Criterion 1", "Criterion 2"],
+      "priority": 1,
+      "passes": false,
+      "notes": ""
+    }
+  ],
+  "technicalNotes": "Optional technical context",
+  "openQuestions": ["Question 1"],
+  "contextDocs": ["url1", "url2"]
+}
+```
+
+**Important notes:**
+- `passes` must be boolean `false`, not string `"false"`
+- `type` values: `"feature"`, `"enhancement"`, `"spike"`, `"chore"`, `"bug"`
+- Stories are ordered by `priority` (1 = highest)
 
 ## Project Structure
 
 ```
-ralph-prd-generator/
+fade-prd-generator/
 ├── app/
 │   ├── page.tsx              # Landing page
 │   ├── layout.tsx            # Root layout
 │   ├── globals.css           # Global styles
 │   ├── chat/
 │   │   └── page.tsx          # Chat interface
+│   ├── mode/
+│   │   └── page.tsx          # Interview mode selection
 │   ├── output/
 │   │   └── page.tsx          # PRD output view
 │   └── api/
@@ -139,29 +201,15 @@ ralph-prd-generator/
 │   ├── ChatInput.tsx         # Message input
 │   ├── ProgressIndicator.tsx # Phase tracker
 │   ├── MarkdownPreview.tsx   # Markdown renderer
-│   └── OutputTabs.tsx        # Output tab switcher
-├── lib/
-│   ├── types.ts              # TypeScript types
-│   ├── prompts.ts            # System prompts
-│   ├── claude.ts             # API client
-│   └── utils.ts              # Helper functions
-└── skills/
-    └── prd-generator/
-        └── SKILL.md          # Claude-Code skill
+│   ├── OutputTabs.tsx        # Output tab switcher
+│   ├── Navbar.tsx            # Navigation bar
+│   └── HelpModal.tsx         # In-app help
+└── lib/
+    ├── types.ts              # TypeScript types
+    ├── prompts.ts            # System prompts
+    ├── claude.ts             # API client
+    └── utils.ts              # Helper functions
 ```
-
-## Claude-Code Skill
-
-This project includes a `/prd` skill for developers using [Claude-Code](https://claude.com/claude-code).
-
-To use it:
-
-```bash
-# In Claude-Code
-/prd
-```
-
-The skill will guide you through creating a PRD directly in your development environment, saved to `tasks/prd-[feature-name].md`.
 
 ## Deployment
 
@@ -194,12 +242,6 @@ The app includes `noindex, nofollow` meta tags to prevent search engine indexing
 
 ## Development
 
-### Running Tests
-
-```bash
-npm test
-```
-
 ### Building for Production
 
 ```bash
@@ -227,7 +269,7 @@ npm run lint
 - Keep user stories small (2-4 hours max)
 - Slice vertically (end-to-end value), not horizontally (technical layers)
 - Write acceptance criteria that are testable
-- Include "Typecheck passes" as a criterion for all stories
+- Include stack-appropriate validation as a criterion
 
 ## Troubleshooting
 
@@ -249,11 +291,15 @@ npm run lint
 
 ### Runtime Issues
 
-**Problem**: Page not found after clicking "Start New PRD"
+**Problem**: Page not found after selecting work type
 **Solution**: Ensure `app/chat/page.tsx` exists
 
 **Problem**: PRD not displaying on output page
 **Solution**: Check browser console for errors, ensure session storage is enabled
+
+## Related Projects
+
+- [FADE](https://github.com/themitchelli/fade) - Framework for Agentic Development and Engineering
 
 ## Contributing
 
@@ -267,12 +313,6 @@ Contributions welcome! Please:
 ## License
 
 MIT License - see LICENSE file for details
-
-## Acknowledgments
-
-- Built with [Next.js](https://nextjs.org/)
-- Powered by [Claude](https://anthropic.com/)
-- Designed for [Ralph](https://github.com/snarktank/ralph)
 
 ## Support
 

@@ -56,3 +56,20 @@ For blocked stories, use:
 - Spike branchName was already correct ("spike/...")
 - Files changed: lib/prompts.ts
 - Tests: npm run build passed
+
+## 2026-01-19 11:00 - US-005: Rename GitHub repository - BLOCKED
+
+- What was attempted: Reviewed requirements for repository rename
+- What's blocking: Repository rename requires manual action on GitHub by maintainer
+- Suggested resolution: Maintainer should rename repo on GitHub from ralph-prd-generator to fade-prd-generator (or prd-generator), then update README with new repo name
+
+## 2026-01-19 11:05 - US-006: Update README for FADE alignment - COMPLETE
+
+- Rewrote README.md with FADE branding
+- Added link to FADE repo: https://github.com/themitchelli/fade
+- Documented PRD JSON structure with example
+- Documented filename convention ({TYPE}-XXX-{slug}.json)
+- Removed all Ralph references
+- Updated work types documentation and feature list
+- Files changed: README.md
+- Tests: npm run build passed
