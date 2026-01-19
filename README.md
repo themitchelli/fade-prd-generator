@@ -211,9 +211,33 @@ fade-prd-generator/
     └── utils.ts              # Helper functions
 ```
 
+## Live Demo
+
+**https://prd-generator.ddns.net**
+
+Hosted on Raspberry Pi 5 with Caddy reverse proxy and automatic HTTPS.
+
 ## Deployment
 
-### Vercel (Recommended)
+### Docker (Recommended for Self-Hosting)
+
+The project includes Docker support optimized for ARM64 (Raspberry Pi) and x86_64.
+
+```bash
+# Clone and configure
+git clone https://github.com/themitchelli/fade-prd-generator.git
+cd fade-prd-generator
+echo "ANTHROPIC_API_KEY=your-key-here" > .env
+
+# Build and run
+docker compose up -d --build
+
+# Access at http://localhost:3001
+```
+
+See `deploy/README.md` for full deployment instructions including Caddy reverse proxy setup.
+
+### Vercel
 
 1. Push your code to GitHub
 2. Import project in [Vercel](https://vercel.com)
