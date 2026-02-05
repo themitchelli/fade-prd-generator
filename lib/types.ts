@@ -196,3 +196,32 @@ export interface ParkedSession {
   phase: ConversationPhase;
   messages: Message[];
 }
+
+// PRD Validation Types
+export interface QualityIssue {
+  field: string;
+  issue: string;
+  severity: 'error' | 'warning' | 'suggestion';
+}
+
+export interface QualityAssessment {
+  score: 'good' | 'acceptable' | 'needs-improvement';
+  issues: QualityIssue[];
+  recommendation: 'output' | 'interview';
+  suggestedQuestions?: string[];
+}
+
+export interface PRDValidationResult {
+  valid: boolean;
+  transformed: PRDJson | null;
+  schemaErrors: string[];
+  transformations: string[];
+  qualityAssessment: QualityAssessment | null;
+}
+
+export interface ImportedPRDSession {
+  version: 1;
+  prd: PRDJson;
+  qualityAssessment: QualityAssessment;
+  timestamp: string;
+}

@@ -8,8 +8,9 @@ import ProgressIndicator from '@/components/ProgressIndicator';
 import Navbar from '@/components/Navbar';
 import NavigationModal from '@/components/NavigationModal';
 import HelpModal from '@/components/HelpModal';
-import { Message, ConversationPhase, WorkType, InterviewMode, FlowType, getFlowType, ParkedSession } from '@/lib/types';
+import { Message, ConversationPhase, WorkType, InterviewMode, FlowType, getFlowType, ParkedSession, ImportedPRDSession } from '@/lib/types';
 import { formatMarkdownPRD, formatSpikeBrief, formatTechDebtBrief, formatBugReport, downloadFile, kebabCase } from '@/lib/utils';
+import { PRD_IMPORT_PROMPT } from '@/lib/prompts';
 
 const workTypeLabels: Record<WorkType, string> = {
   'new-project': 'New Project',
@@ -31,6 +32,7 @@ function ChatPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const isResume = searchParams.get('resume') === 'true';
+  const isImport = searchParams.get('import') === 'true';
 
   const [messages, setMessages] = useState<Message[]>([]);
   const [phase, setPhase] = useState<ConversationPhase>('value');
@@ -41,6 +43,7 @@ function ChatPageContent() {
   const [flowType, setFlowType] = useState<FlowType>('feature');
   const [showNavigationModal, setShowNavigationModal] = useState(false);
   const [showHelpModal, setShowHelpModal] = useState(false);
+  const [importedPRD, setImportedPRD] = useState<ImportedPRDSession | null>(null);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const initializedRef = useRef(false);
@@ -48,6 +51,56 @@ function ChatPageContent() {
   useEffect(() => {
     if (initializedRef.current) return;
     initializedRef.current = true;
+
+    // Handle import mode - PRD uploaded for improvement
+    if (isImport) {
+      const importedSessionJson = sessionStorage.getItem('importedPRD');
+
+      if (importedSessionJson) {
+        try {
+          const imported: ImportedPRDSession = JSON.parse(importedSessionJson);
+          setImportedPRD(imported);
+
+          // Set up as enhancement flow
+          setWorkType('enhancement');
+          setFlowType('feature');
+          setPhase('stories'); // Start in stories phase since we have a PRD
+          setInterviewMode('standard');
+
+          // Create a summary of the imported PRD for the initial message
+          const prd = imported.prd;
+          const issues = imported.qualityAssessment.issues;
+
+          const prdSummary = `Feature: ${prd.featureName}
+Problem: ${prd.problemStatement?.slice(0, 200)}${prd.problemStatement?.length > 200 ? '...' : ''}
+User Stories: ${prd.userStories?.length || 0}`;
+
+          // Generate initial assistant message based on the import prompt
+          const issuesSummary = issues.length > 0
+            ? `\n\nI noticed some areas that could be improved:\n${issues.slice(0, 3).map(i => `- **${i.field}**: ${i.issue}`).join('\n')}${issues.length > 3 ? `\n- ...and ${issues.length - 3} more` : ''}`
+            : '';
+
+          const firstIssue = issues.find(i => i.severity === 'error') || issues[0];
+          const firstQuestion = firstIssue
+            ? `\n\nLet's start with the ${firstIssue.field}: ${firstIssue.issue}. Can you help me understand more about this?`
+            : '\n\nThe PRD looks good overall. Would you like me to help refine any specific sections?';
+
+          const initialMessage: Message = {
+            role: 'assistant',
+            content: `I've reviewed the uploaded PRD for "${prd.featureName}".${issuesSummary}${firstQuestion}`,
+          };
+          setMessages([initialMessage]);
+
+          sessionStorage.removeItem('importedPRD');
+          return;
+        } catch (err) {
+          console.error('Failed to parse imported PRD:', err);
+        }
+      }
+
+      router.push('/');
+      return;
+    }
 
     if (isResume) {
       const parkedSessionJson = sessionStorage.getItem('parkedSession');
@@ -111,7 +164,7 @@ function ChatPageContent() {
       content: initialMessages[flow],
     };
     setMessages([initialMessage]);
-  }, [isResume, router]);
+  }, [isResume, isImport, router]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -127,14 +180,32 @@ function ChatPageContent() {
     setError('');
 
     try {
+      const requestBody: {
+        messages: Message[];
+        flowType: FlowType;
+        interviewMode: InterviewMode | null;
+        importContext?: {
+          prd: typeof importedPRD extends null ? never : NonNullable<typeof importedPRD>['prd'];
+          issues: typeof importedPRD extends null ? never : NonNullable<typeof importedPRD>['qualityAssessment']['issues'];
+        };
+      } = {
+        messages: updatedMessages,
+        flowType,
+        interviewMode,
+      };
+
+      // Include import context if this is an imported PRD session
+      if (importedPRD) {
+        requestBody.importContext = {
+          prd: importedPRD.prd,
+          issues: importedPRD.qualityAssessment.issues,
+        };
+      }
+
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          messages: updatedMessages,
-          flowType,
-          interviewMode,
-        }),
+        body: JSON.stringify(requestBody),
       });
 
       if (!response.ok) {
@@ -291,6 +362,11 @@ function ChatPageContent() {
               {interviewMode && (
                 <span className="text-xs px-2 py-0.5 bg-gray-100 text-gray-600 rounded-full">
                   {interviewMode === 'quick' ? 'Quick' : 'Standard'}
+                </span>
+              )}
+              {importedPRD && (
+                <span className="text-xs px-2 py-0.5 bg-purple-100 text-purple-700 rounded-full">
+                  Imported PRD
                 </span>
               )}
             </div>

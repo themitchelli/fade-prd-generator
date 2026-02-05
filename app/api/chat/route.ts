@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClaudeClient, MODEL } from '@/lib/claude';
-import { getSystemPrompt } from '@/lib/prompts';
-import { Message, FlowType, InterviewMode } from '@/lib/types';
+import { getSystemPrompt, PRD_IMPORT_PROMPT } from '@/lib/prompts';
+import { Message, FlowType, InterviewMode, PRDJson, QualityIssue } from '@/lib/types';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -64,10 +64,14 @@ function detectPhase(message: string, flowType: FlowType): string {
 
 export async function POST(request: NextRequest) {
   try {
-    const { messages, flowType = 'feature', interviewMode } = await request.json() as {
+    const { messages, flowType = 'feature', interviewMode, importContext } = await request.json() as {
       messages: Message[];
       flowType?: FlowType;
       interviewMode?: InterviewMode;
+      importContext?: {
+        prd: PRDJson;
+        issues: QualityIssue[];
+      };
     };
 
     if (!messages || !Array.isArray(messages)) {
@@ -80,7 +84,27 @@ export async function POST(request: NextRequest) {
     const claude = createClaudeClient();
 
     // Prepare system prompt based on flow type and mode
-    const systemPrompt = getSystemPrompt(flowType, interviewMode);
+    let systemPrompt: string;
+
+    if (importContext) {
+      // Use import prompt for imported PRD sessions
+      const prdSummary = `Feature: ${importContext.prd.featureName}
+Project: ${importContext.prd.project}
+Problem: ${importContext.prd.problemStatement}
+
+Success Metrics:
+${importContext.prd.successMetrics?.map(m => `- ${m}`).join('\n') || '(none)'}
+
+In Scope: ${importContext.prd.inScope?.join(', ') || '(none)'}
+Out of Scope: ${importContext.prd.outOfScope?.join(', ') || '(none)'}
+
+User Stories (${importContext.prd.userStories?.length || 0}):
+${importContext.prd.userStories?.map(s => `- ${s.id}: ${s.title} - ${s.description}`).join('\n') || '(none)'}`;
+
+      systemPrompt = PRD_IMPORT_PROMPT(prdSummary, importContext.issues);
+    } else {
+      systemPrompt = getSystemPrompt(flowType, interviewMode);
+    }
 
     // Convert messages to Claude format
     const claudeMessages = messages.map((msg: Message) => ({

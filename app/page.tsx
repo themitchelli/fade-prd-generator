@@ -2,9 +2,11 @@
 
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useState, useEffect, ChangeEvent, Suspense } from 'react';
-import { WorkType, needsModeSelection, ParkedSession } from '@/lib/types';
+import { WorkType, needsModeSelection, ParkedSession, PRDValidationResult, ImportedPRDSession } from '@/lib/types';
+import { formatMarkdownPRD } from '@/lib/utils';
 import Navbar from '@/components/Navbar';
 import HelpModal from '@/components/HelpModal';
+import PRDValidationModal from '@/components/PRDValidationModal';
 
 const workTypes: { id: WorkType; title: string; description: string; icon: string }[] = [
   {
@@ -49,9 +51,15 @@ function HomeContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [showUpload, setShowUpload] = useState(false);
+  const [showPRDUpload, setShowPRDUpload] = useState(false);
   const [showParkedMessage, setShowParkedMessage] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const [prdUploadError, setPRDUploadError] = useState<string | null>(null);
   const [showHelpModal, setShowHelpModal] = useState(false);
+  const [showValidationModal, setShowValidationModal] = useState(false);
+  const [validationResult, setValidationResult] = useState<PRDValidationResult | null>(null);
+  const [isValidating, setIsValidating] = useState(false);
+  const [validationError, setValidationError] = useState<string | null>(null);
 
   useEffect(() => {
     if (searchParams.get('parked') === 'true') {
@@ -108,10 +116,158 @@ function HomeContent() {
     setShowHelpModal(true);
   };
 
+  const handlePRDUpload = async (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setPRDUploadError(null);
+    setValidationError(null);
+    setValidationResult(null);
+
+    const reader = new FileReader();
+    reader.onload = async (event) => {
+      const content = event.target?.result as string;
+
+      try {
+        const parsed = JSON.parse(content);
+
+        // Show the validation modal and start validation
+        setShowValidationModal(true);
+        setIsValidating(true);
+
+        const response = await fetch('/api/prd/validate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ prdContent: parsed }),
+        });
+
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.error || 'Validation failed');
+        }
+
+        const result: PRDValidationResult = await response.json();
+        setValidationResult(result);
+      } catch (err: any) {
+        console.error('PRD upload error:', err);
+        if (err.message.includes('JSON')) {
+          setValidationError('Invalid JSON file. Please upload a valid JSON file.');
+        } else {
+          setValidationError(err.message || 'Failed to validate PRD.');
+        }
+      } finally {
+        setIsValidating(false);
+      }
+    };
+    reader.readAsText(file);
+
+    // Reset the input so the same file can be uploaded again
+    e.target.value = '';
+  };
+
+  const handleViewPRD = () => {
+    if (!validationResult?.transformed) return;
+
+    const prd = validationResult.transformed;
+
+    // Convert to markdown format for display
+    const markdownData = {
+      featureName: prd.featureName,
+      problemStatement: prd.problemStatement,
+      successMetrics: prd.successMetrics,
+      inScope: prd.inScope,
+      outOfScope: prd.outOfScope,
+      userStories: prd.userStories.map(s => ({
+        id: s.id,
+        title: s.title,
+        description: s.description,
+        acceptanceCriteria: s.acceptanceCriteria,
+      })),
+      technicalNotes: prd.technicalNotes,
+      openQuestions: prd.openQuestions,
+      contextDocs: prd.contextDocs,
+    };
+
+    sessionStorage.setItem('prdMarkdown', formatMarkdownPRD(markdownData));
+    sessionStorage.setItem('prdJson', JSON.stringify(prd, null, 2));
+    sessionStorage.setItem('prdFeatureName', prd.featureName);
+    sessionStorage.setItem('outputType', 'feature');
+
+    setShowValidationModal(false);
+    router.push('/output');
+  };
+
+  const handleFixInInterview = () => {
+    if (!validationResult?.transformed || !validationResult.qualityAssessment) return;
+
+    // Store the imported PRD session data
+    const importSession: ImportedPRDSession = {
+      version: 1,
+      prd: validationResult.transformed,
+      qualityAssessment: validationResult.qualityAssessment,
+      timestamp: new Date().toISOString(),
+    };
+
+    sessionStorage.setItem('importedPRD', JSON.stringify(importSession));
+    sessionStorage.setItem('workType', 'enhancement');
+
+    setShowValidationModal(false);
+    router.push('/chat?import=true');
+  };
+
+  const handleDownloadAnyway = () => {
+    if (!validationResult?.transformed) return;
+
+    const prd = validationResult.transformed;
+
+    // Convert to markdown format for display
+    const markdownData = {
+      featureName: prd.featureName,
+      problemStatement: prd.problemStatement,
+      successMetrics: prd.successMetrics,
+      inScope: prd.inScope,
+      outOfScope: prd.outOfScope,
+      userStories: prd.userStories.map(s => ({
+        id: s.id,
+        title: s.title,
+        description: s.description,
+        acceptanceCriteria: s.acceptanceCriteria,
+      })),
+      technicalNotes: prd.technicalNotes,
+      openQuestions: prd.openQuestions,
+      contextDocs: prd.contextDocs,
+    };
+
+    sessionStorage.setItem('prdMarkdown', formatMarkdownPRD(markdownData));
+    sessionStorage.setItem('prdJson', JSON.stringify(prd, null, 2));
+    sessionStorage.setItem('prdFeatureName', prd.featureName);
+    sessionStorage.setItem('outputType', 'feature');
+
+    setShowValidationModal(false);
+    router.push('/output');
+  };
+
+  const handleCloseValidationModal = () => {
+    setShowValidationModal(false);
+    setValidationResult(null);
+    setValidationError(null);
+    setShowPRDUpload(false);
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex flex-col">
       <Navbar onHomeClick={handleHomeClick} onHelpClick={handleHelpClick} />
       <HelpModal isOpen={showHelpModal} onClose={() => setShowHelpModal(false)} />
+      <PRDValidationModal
+        isOpen={showValidationModal}
+        result={validationResult}
+        isLoading={isValidating}
+        error={validationError}
+        onClose={handleCloseValidationModal}
+        onViewPRD={handleViewPRD}
+        onFixInInterview={handleFixInInterview}
+        onDownloadAnyway={handleDownloadAnyway}
+      />
       <div className="flex-1 flex items-center justify-center px-4 py-8">
         <div className="max-w-4xl w-full">
           <div className="bg-white rounded-2xl shadow-xl p-8 md:p-12">
@@ -147,7 +303,46 @@ function HomeContent() {
               ))}
             </div>
 
-            <div className="border-t border-gray-200 pt-6">
+            <div className="border-t border-gray-200 pt-6 space-y-4">
+              {/* Upload Existing PRD */}
+              {!showPRDUpload ? (
+                <button
+                  onClick={() => setShowPRDUpload(true)}
+                  className="w-full bg-blue-50 text-blue-700 px-8 py-4 rounded-lg text-lg font-semibold hover:bg-blue-100 transition-colors border-2 border-blue-200"
+                >
+                  Upload Existing PRD
+                </button>
+              ) : (
+                <div className="border-2 border-dashed border-blue-300 rounded-lg p-6 text-center bg-blue-50">
+                  <label className="cursor-pointer">
+                    <input
+                      type="file"
+                      accept=".json"
+                      onChange={handlePRDUpload}
+                      className="hidden"
+                    />
+                    <div className="text-blue-700">
+                      <div className="text-lg font-medium mb-2">
+                        Upload your PRD file
+                      </div>
+                      <div className="text-sm text-blue-600">
+                        Click to select a JSON PRD file for validation and reformatting
+                      </div>
+                    </div>
+                  </label>
+                  {prdUploadError && (
+                    <p className="mt-3 text-sm text-red-600">{prdUploadError}</p>
+                  )}
+                  <button
+                    onClick={() => setShowPRDUpload(false)}
+                    className="mt-3 text-sm text-gray-500 hover:text-gray-700"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              )}
+
+              {/* Continue Parked Session */}
               {!showUpload ? (
                 <button
                   onClick={() => setShowUpload(true)}
@@ -176,6 +371,12 @@ function HomeContent() {
                   {uploadError && (
                     <p className="mt-3 text-sm text-red-600">{uploadError}</p>
                   )}
+                  <button
+                    onClick={() => setShowUpload(false)}
+                    className="mt-3 text-sm text-gray-500 hover:text-gray-700"
+                  >
+                    Cancel
+                  </button>
                 </div>
               )}
             </div>
