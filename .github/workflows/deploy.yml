@@ -9,19 +9,30 @@ on:
 
 jobs:
   deploy:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
 
     steps:
-      - name: Deploy to Raspberry Pi
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.PI_HOST }}
-          username: ${{ secrets.PI_USERNAME }}
-          key: ${{ secrets.PI_SSH_KEY }}
-          port: ${{ secrets.PI_PORT || 22 }}
-          script: |
-            cd /opt/fade-prd-generator
-            git pull origin master
-            docker compose down
-            docker compose up -d --build
-            docker image prune -f
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Deploy with Docker Compose
+        run: |
+          mkdir -p ~/apps/fade-prd-generator
+          # Preserve .env file if it exists
+          if [ -f ~/apps/fade-prd-generator/.env ]; then
+            cp ~/apps/fade-prd-generator/.env /tmp/fade-prd-generator.env.bak
+          fi
+          cp -r $GITHUB_WORKSPACE/* ~/apps/fade-prd-generator/
+          # Restore .env file
+          if [ -f /tmp/fade-prd-generator.env.bak ]; then
+            cp /tmp/fade-prd-generator.env.bak ~/apps/fade-prd-generator/.env
+            rm /tmp/fade-prd-generator.env.bak
+          fi
+          cd ~/apps/fade-prd-generator
+          docker compose up -d --build
+          docker system prune -f
+
+      - name: Health check
+        run: |
+          sleep 15
+          curl -f http://localhost:3001 || echo "App may still be starting"
